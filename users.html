@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users — Ogong Hardware</title>
+    <meta name="description" content="Manage system users and access roles for Ogong Hardware.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>User Management</h1>
+            <p>Manage system accounts and access roles</p>
+        </div>
+        <div class="page-header-right">
+            <button class="btn btn-primary" onclick="openModal('addModal')">
+                ➕ Add User
+            </button>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <h2>👤 System Users</h2>
+            <span id="userCount" class="badge badge-gray">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Date Created</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    <tr class="loading-row">
+                        <td colspan="6"><span class="spinner"></span> Loading users…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+
+<!-- ADD USER MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>➕ Add New User</h2>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid form-grid-2">
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="addFullName">Full Name <span class="req">*</span></label>
+                    <input type="text" id="addFullName" class="form-control" placeholder="e.g. Juan Dela Cruz">
+                </div>
+                <div class="form-group">
+                    <label for="addUsername">Username <span class="req">*</span></label>
+                    <input type="text" id="addUsername" class="form-control" placeholder="Unique login name" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="addPassword">Password <span class="req">*</span></label>
+                    <input type="password" id="addPassword" class="form-control" placeholder="Set a password" autocomplete="new-password">
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="addRole">Role <span class="req">*</span></label>
+                    <select id="addRole" class="form-control">
+                        <option value="cashier">🛒 Cashier</option>
+                        <option value="admin">🔑 Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:12px;padding:12px;background:var(--warning-bg);border-radius:var(--radius-sm);font-size:12.5px;color:#92400e">
+                ⚠️ <strong>Roles:</strong> Admins have full access. Cashiers can only use the POS.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+            <button class="btn btn-primary" id="addBtn" onclick="addUser()">Create User</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+
+async function loadUsers() {
+    const res   = await fetch('/api/users');
+    const users = await res.json();
+    const tbody = document.getElementById('usersTable');
+    document.getElementById('userCount').textContent = users.length + ' users';
+
+    if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">
+            <div class="table-empty">
+                <div class="empty-icon">👤</div>
+                <p>No users found</p>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = users.map((u, i) => {
+        const initials = u.full_name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+        const roleBadge = u.role === 'admin'
+            ? '<span class="badge badge-amber">🔑 Admin</span>'
+            : '<span class="badge badge-info">🛒 Cashier</span>';
+        const statusBadge = u.status === 'active'
+            ? '<span class="badge badge-success">● Active</span>'
+            : '<span class="badge badge-danger">● Inactive</span>';
+        const dt = new Date(u.created_at).toLocaleDateString('en-PH');
+
+        return `<tr>
+            <td style="color:var(--text-faint)">${i + 1}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--amber),#fbbf24);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${initials}</div>
+                    <strong>${u.full_name}</strong>
+                </div>
+            </td>
+            <td><code style="font-size:12px;background:var(--bg);padding:2px 7px;border-radius:4px">${u.username}</code></td>
+            <td>${roleBadge}</td>
+            <td>${statusBadge}</td>
+            <td style="font-size:12px;color:var(--text-faint)">${dt}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function addUser() {
+    const btn      = document.getElementById('addBtn');
+    const fullName = document.getElementById('addFullName').value.trim();
+    const username = document.getElementById('addUsername').value.trim();
+    const password = document.getElementById('addPassword').value;
+    const role     = document.getElementById('addRole').value;
+
+    if (!fullName || !username || !password) {
+        toast('Full name, username and password are required.', 'error');
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Creating…';
+
+    const res    = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: fullName, username, password, role })
+    });
+    const result = await res.json();
+
+    btn.disabled    = false;
+    btn.textContent = 'Create User';
+
+    if (result.success) {
+        toast(`User "${username}" created!`, 'success');
+        closeModal('addModal');
+        ['addFullName','addUsername','addPassword'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        loadUsers();
+    } else {
+        toast(result.message || 'Failed to create user.', 'error');
+    }
+}
+
+loadUsers();
+
+</script>
+</body>
+</html>

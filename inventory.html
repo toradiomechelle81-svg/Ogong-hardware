@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory — Ogong Hardware</title>
+    <meta name="description" content="Track and manage hardware inventory stock levels.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Inventory</h1>
+            <p>Monitor stock levels and record movements</p>
+        </div>
+        <div class="page-header-right">
+            <button class="btn btn-primary" onclick="openModal('stockModal')">
+                📋 Record Movement
+            </button>
+        </div>
+    </div>
+
+    <!-- Stock Levels Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2>🏷️ Stock Levels</h2>
+            <div class="table-header-actions">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Search…" oninput="filterInventory()">
+                </div>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Stock</th>
+                        <th>Min Stock</th>
+                        <th>Level</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable">
+                    <tr class="loading-row">
+                        <td colspan="7"><span class="spinner"></span> Loading…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Movement History -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2>📋 Movement History</h2>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody id="movementsTable">
+                    <tr class="loading-row">
+                        <td colspan="6"><span class="spinner"></span> Loading…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+
+<!-- STOCK MOVEMENT MODAL -->
+<div class="modal-overlay" id="stockModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📋 Record Stock Movement</h2>
+            <button class="modal-close" onclick="closeModal('stockModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="stockProduct">Product <span class="req">*</span></label>
+                    <select id="stockProduct" class="form-control">
+                        <option value="">— Select Product —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stockType">Movement Type <span class="req">*</span></label>
+                    <select id="stockType" class="form-control">
+                        <option value="stock-in">📥 Stock In (Receive / Restock)</option>
+                        <option value="stock-out">📤 Stock Out (Damage / Loss)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="stockQty">Quantity <span class="req">*</span></label>
+                    <input type="number" id="stockQty" class="form-control" min="1" placeholder="Enter quantity">
+                </div>
+                <div class="form-group">
+                    <label for="stockRef">Reference / Reason</label>
+                    <input type="text" id="stockRef" class="form-control" placeholder="e.g. Purchase Order #123">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('stockModal')">Cancel</button>
+            <button class="btn btn-primary" id="saveStockBtn" onclick="saveMovement()">Save Movement</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+
+let allProducts = [];
+
+function stockBadge(stock, min) {
+    if (stock === 0) return '<span class="badge badge-danger">Out of Stock</span>';
+    if (stock <= min)  return '<span class="badge badge-warning">Low Stock</span>';
+    return '<span class="badge badge-success">In Stock</span>';
+}
+
+function stockBarClass(stock, min) {
+    if (stock === 0)   return 'low';
+    if (stock <= min)  return 'medium';
+    return 'high';
+}
+
+function stockBarPct(stock, min) {
+    const cap = Math.max(min * 3, 10);
+    return Math.min(100, Math.round(stock / cap * 100));
+}
+
+async function loadProducts() {
+    const res  = await fetch('/api/products');
+    allProducts = await res.json();
+    renderInventory(allProducts);
+    populateSelect();
+}
+
+function renderInventory(list) {
+    const tbody = document.getElementById('inventoryTable');
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7">
+            <div class="table-empty">
+                <div class="empty-icon">📦</div>
+                <p>No products found</p>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map(p => {
+        const pct   = stockBarPct(p.stock, p.minimum_stock);
+        const cls   = stockBarClass(p.stock, p.minimum_stock);
+        return `<tr>
+            <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${p.sku}</code></td>
+            <td><strong>${p.name}</strong></td>
+            <td><span class="badge badge-gray">${p.category}</span></td>
+            <td><strong style="font-size:16px">${p.stock}</strong></td>
+            <td style="color:var(--text-muted)">${p.minimum_stock}</td>
+            <td>
+                <div class="stock-level-bar">
+                    <div class="stock-bar">
+                        <div class="stock-bar-fill ${cls}" style="width:${pct}%"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-faint);width:32px;text-align:right">${pct}%</span>
+                </div>
+            </td>
+            <td>${stockBadge(p.stock, p.minimum_stock)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterInventory() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allProducts.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q)
+    );
+    renderInventory(filtered);
+}
+
+function populateSelect() {
+    const sel = document.getElementById('stockProduct');
+    sel.innerHTML = '<option value="">— Select Product —</option>' +
+        allProducts.map(p => `<option value="${p.id}">${p.sku} – ${p.name} (Stock: ${p.stock})</option>`).join('');
+}
+
+async function loadMovements() {
+    const res  = await fetch('/api/inventory/movements');
+    const rows = await res.json();
+    const tbody = document.getElementById('movementsTable');
+
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-faint)">No movements recorded yet</td></tr>`;
+        return;
+    }
+
+    const typeMap = {
+        'STOCK-IN':  ['movement-in',  '📥 Stock In'],
+        'STOCK-OUT': ['movement-out', '📤 Stock Out'],
+        'SALE':      ['movement-sale','🛒 Sale'],
+    };
+
+    tbody.innerHTML = rows.map(r => {
+        const [cls, label] = typeMap[r.type] || ['badge-gray', r.type];
+        const dt = new Date(r.created_at).toLocaleString('en-PH');
+        return `<tr>
+            <td style="font-size:12px;color:var(--text-muted)">${dt}</td>
+            <td><strong>${r.product_name}</strong></td>
+            <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${r.sku}</code></td>
+            <td><span class="badge ${cls}">${label}</span></td>
+            <td><strong>${r.quantity}</strong></td>
+            <td style="font-size:12px;color:var(--text-muted)">${r.reference || '—'}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveMovement() {
+    const btn     = document.getElementById('saveStockBtn');
+    const product = document.getElementById('stockProduct').value;
+    const type    = document.getElementById('stockType').value;
+    const qty     = Number(document.getElementById('stockQty').value);
+    const ref     = document.getElementById('stockRef').value.trim();
+
+    if (!product || !qty || qty < 1) {
+        toast('Please select a product and enter a valid quantity.', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const res    = await fetch(`/api/inventory/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: Number(product), quantity: qty, reference: ref })
+    });
+    const result = await res.json();
+
+    btn.disabled = false;
+    btn.textContent = 'Save Movement';
+
+    if (result.success) {
+        toast(result.message || 'Movement recorded!', 'success');
+        closeModal('stockModal');
+        document.getElementById('stockQty').value = '';
+        document.getElementById('stockRef').value = '';
+        loadProducts();
+        loadMovements();
+    } else {
+        toast(result.message || 'Failed to save.', 'error');
+    }
+}
+
+loadProducts();
+loadMovements();
+
+</script>
+</body>
+</html>

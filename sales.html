@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales History — Ogong Hardware</title>
+    <meta name="description" content="View all past sales transactions at Ogong Hardware.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Sales History</h1>
+            <p>All completed sales transactions</p>
+        </div>
+        <div class="page-header-right">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search receipt or cashier…" oninput="filterSales()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="stats-grid">
+        <div class="stat-card success">
+            <div class="stat-icon success">💰</div>
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value success" id="totalRevenue">—</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-icon info">🧾</div>
+            <div class="stat-label">Total Transactions</div>
+            <div class="stat-value info" id="totalTx">—</div>
+        </div>
+        <div class="stat-card amber">
+            <div class="stat-icon amber">📅</div>
+            <div class="stat-label">Today's Sales</div>
+            <div class="stat-value amber" id="todaySales">—</div>
+        </div>
+    </div>
+
+    <!-- Sales Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2>🧾 Transactions</h2>
+            <span id="salesCount" class="badge badge-gray">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Receipt No.</th>
+                        <th>Date & Time</th>
+                        <th>Customer</th>
+                        <th>Cashier</th>
+                        <th>Subtotal</th>
+                        <th>Discount</th>
+                        <th>Total</th>
+                        <th>Cash</th>
+                        <th>Change</th>
+                        <th>Payment</th>
+                    </tr>
+                </thead>
+                <tbody id="salesTable">
+                    <tr class="loading-row">
+                        <td colspan="10"><span class="spinner"></span> Loading sales…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script src="app.js"></script>
+<script>
+
+let allSales = [];
+
+async function loadSales() {
+    const res  = await fetch('/api/sales');
+    allSales   = await res.json();
+    renderSales(allSales);
+    computeSummary(allSales);
+}
+
+function computeSummary(list) {
+    const total    = list.reduce((s, x) => s + x.total, 0);
+    const today    = new Date().toDateString();
+    const todayAmt = list.filter(s => new Date(s.created_at).toDateString() === today)
+                         .reduce((s, x) => s + x.total, 0);
+
+    document.getElementById('totalRevenue').textContent = peso(total);
+    document.getElementById('totalTx').textContent      = list.length.toLocaleString();
+    document.getElementById('todaySales').textContent   = peso(todayAmt);
+}
+
+function renderSales(list) {
+    const tbody = document.getElementById('salesTable');
+    document.getElementById('salesCount').textContent = list.length + ' transactions';
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10">
+            <div class="table-empty">
+                <div class="empty-icon">🧾</div>
+                <p>No sales recorded yet</p>
+                <small>Completed sales will appear here</small>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map(s => {
+        const dt = new Date(s.created_at).toLocaleString('en-PH');
+        return `<tr>
+            <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${s.receipt_no}</code></td>
+            <td style="font-size:12px;color:var(--text-muted)">${dt}</td>
+            <td>${s.customer || '<span style="color:var(--text-faint)">Walk-in</span>'}</td>
+            <td>${s.cashier || '—'}</td>
+            <td style="color:var(--text-muted)">${peso(s.subtotal)}</td>
+            <td style="color:var(--danger)">${s.discount > 0 ? '-' + peso(s.discount) : '—'}</td>
+            <td><strong style="color:var(--success);font-size:15px">${peso(s.total)}</strong></td>
+            <td style="color:var(--text-muted)">${peso(s.cash_received)}</td>
+            <td>${peso(s.change_amount)}</td>
+            <td><span class="badge badge-info">${s.payment_method}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+function filterSales() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allSales.filter(s =>
+        s.receipt_no.toLowerCase().includes(q) ||
+        (s.cashier || '').toLowerCase().includes(q) ||
+        (s.customer || '').toLowerCase().includes(q)
+    );
+    renderSales(filtered);
+}
+
+loadSales();
+
+</script>
+</body>
+</html>

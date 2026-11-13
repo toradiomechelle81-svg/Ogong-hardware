@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Ogong Hardware Management System</title>
+    <meta name="description" content="Sign in to Ogong Hardware Management System to manage inventory, sales, and more.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body class="login-page">
+
+<!-- LEFT: HERO PANEL -->
+<div class="login-hero">
+    <div class="login-hero-content">
+
+        <div class="login-hero-logo">🔨</div>
+
+        <h1>OGONG HARDWARE</h1>
+        <p>Management System</p>
+
+        <div class="login-hero-features">
+            <div class="hero-feature">
+                <div class="hero-feature-icon">📦</div>
+                <span>Real-time inventory tracking</span>
+            </div>
+            <div class="hero-feature">
+                <div class="hero-feature-icon">🛒</div>
+                <span>Fast POS cashier system</span>
+            </div>
+            <div class="hero-feature">
+                <div class="hero-feature-icon">📊</div>
+                <span>Sales reports & analytics</span>
+            </div>
+            <div class="hero-feature">
+                <div class="hero-feature-icon">🚚</div>
+                <span>Supplier & customer management</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- RIGHT: LOGIN FORM -->
+<div class="login-form-side">
+    <div class="login-box">
+
+        <h2>Welcome back 👋</h2>
+        <p class="subtitle">Sign in to your account to continue</p>
+
+        <div id="loginError" class="login-error" role="alert"></div>
+
+        <form id="loginForm" class="login-form" novalidate>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input
+                        type="text"
+                        id="username"
+                        class="form-control"
+                        placeholder="Enter your username"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrap">
+                    <span class="input-icon">🔒</span>
+                    <input
+                        type="password"
+                        id="password"
+                        class="form-control"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+            </div>
+
+            <button type="submit" id="loginBtn" class="btn btn-primary btn-full btn-lg" style="margin-top:8px;">
+                Sign In
+            </button>
+
+        </form>
+
+        <p style="margin-top:24px; font-size:12px; color:var(--text-faint); text-align:center;">
+            Ogong Hardware &copy; 2026 &mdash; All rights reserved
+        </p>
+
+    </div>
+</div>
+
+<script>
+
+const errorEl = document.getElementById('loginError');
+
+if (window.location.protocol === 'file:') {
+    errorEl.innerHTML = '⚠️ You opened this file directly. Please access the app at <a href="http://127.0.0.1:5000" style="color:#d97706;font-weight:600;text-decoration:underline;">http://127.0.0.1:5000</a> with the server running.';
+    errorEl.classList.add('show');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('loginBtn');
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !password) {
+        errorEl.textContent = 'Please enter username and password.';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in…';
+    errorEl.classList.remove('show');
+
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            btn.innerHTML = '✅ Success! Redirecting…';
+            setTimeout(() => {
+                if (data.user.role === 'admin') {
+                    window.location.href = 'admin.html';
+                } else if (data.user.role === 'cashier') {
+                    window.location.href = 'Cashier.html';
+                } else if (data.user.role === 'customer') {
+                    window.location.href = 'customer.html';
+                } else {
+                    // fallback to login if role unknown
+                    window.location.href = 'login.html';
+                }
+            }, 400);
+        } else {
+            errorEl.textContent = data.message || 'Invalid credentials. Please try again.';
+            errorEl.classList.add('show');
+            btn.disabled = false;
+            btn.innerHTML = 'Sign In';
+        }
+
+    } catch (err) {
+        if (window.location.protocol === 'file:') {
+            errorEl.innerHTML = '⚠️ You opened this file directly. Please open <a href="http://127.0.0.1:5000" style="color:#d97706;font-weight:600;text-decoration:underline;">http://127.0.0.1:5000</a> in your browser.';
+        } else {
+            errorEl.textContent = 'Connection error. Make sure the server is running on http://127.0.0.1:5000.';
+        }
+        errorEl.classList.add('show');
+        btn.disabled = false;
+        btn.innerHTML = 'Sign In';
+    }
+});
+
+</script>
+
+</body>
+</html>

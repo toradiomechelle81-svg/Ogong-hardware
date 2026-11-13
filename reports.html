@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports — Ogong Hardware</title>
+    <meta name="description" content="Daily sales reports and business analytics for Ogong Hardware.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Sales Reports</h1>
+            <p>Daily sales breakdown and business analytics</p>
+        </div>
+        <div class="page-header-right">
+            <button class="btn btn-secondary" onclick="loadReport()">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="stats-grid">
+        <div class="stat-card success">
+            <div class="stat-icon success">💰</div>
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value success" id="statTotalRevenue">—</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-icon info">🧾</div>
+            <div class="stat-label">Total Transactions</div>
+            <div class="stat-value info" id="statTotalTx">—</div>
+        </div>
+        <div class="stat-card amber">
+            <div class="stat-icon amber">📅</div>
+            <div class="stat-label">Days Active</div>
+            <div class="stat-value amber" id="statDays">—</div>
+        </div>
+        <div class="stat-card navy">
+            <div class="stat-icon navy">📈</div>
+            <div class="stat-label">Avg Daily Sales</div>
+            <div class="stat-value" id="statAvg">—</div>
+        </div>
+    </div>
+
+    <!-- Sales Bar Chart -->
+    <div class="card">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:20px">📊 Daily Sales (Last 10 Days)</h2>
+        <div id="barChart" style="display:flex;align-items:flex-end;gap:8px;height:180px;padding:0 8px"></div>
+        <div id="barLabels" style="display:flex;gap:8px;padding:8px 8px 0;margin-top:4px"></div>
+    </div>
+
+    <!-- Daily Report Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2>📋 Daily Breakdown</h2>
+            <span id="reportCount" class="badge badge-gray">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Transactions</th>
+                        <th>Total Sales</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTable">
+                    <tr class="loading-row">
+                        <td colspan="5"><span class="spinner"></span> Loading report…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script src="app.js"></script>
+<script>
+
+async function loadReport() {
+    const res  = await fetch('/api/reports/sales');
+    const rows = await res.json();
+
+    // Summary
+    const totalRevenue = rows.reduce((s, r) => s + r.sales, 0);
+    const totalTx      = rows.reduce((s, r) => s + r.transactions, 0);
+    const days         = rows.length;
+    const avg          = days > 0 ? totalRevenue / days : 0;
+
+    document.getElementById('statTotalRevenue').textContent = peso(totalRevenue);
+    document.getElementById('statTotalTx').textContent      = totalTx.toLocaleString();
+    document.getElementById('statDays').textContent         = days;
+    document.getElementById('statAvg').textContent          = peso(avg);
+    document.getElementById('reportCount').textContent      = days + ' days';
+
+    // Bar chart (last 10 days)
+    const chartData = rows.slice(0, 10).reverse();
+    const maxSales  = Math.max(...chartData.map(r => r.sales), 1);
+    const barChart  = document.getElementById('barChart');
+    const barLabels = document.getElementById('barLabels');
+
+    barChart.innerHTML = chartData.map(r => {
+        const h = Math.max(8, Math.round((r.sales / maxSales) * 160));
+        const isToday = r.date === new Date().toISOString().split('T')[0];
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <span style="font-size:10px;color:var(--text-faint);writing-mode:horizontal-tb">${peso(r.sales).replace('₱','₱')}</span>
+            <div style="width:100%;height:${h}px;background:${isToday ? 'linear-gradient(135deg,var(--amber),#fbbf24)' : 'var(--info-bg)'};border-radius:6px 6px 0 0;transition:height .4s ease;min-height:8px"></div>
+        </div>`;
+    }).join('');
+
+    barLabels.innerHTML = chartData.map(r => {
+        const d = new Date(r.date + 'T00:00:00');
+        const label = d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+        return `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-faint)">${label}</div>`;
+    }).join('');
+
+    // Table
+    const tbody = document.getElementById('reportTable');
+
+    if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5">
+            <div class="table-empty">
+                <div class="empty-icon">📊</div>
+                <p>No sales data yet</p>
+                <small>Complete a sale to see reports</small>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    const best = Math.max(...rows.map(r => r.sales));
+
+    tbody.innerHTML = rows.map((r, i) => {
+        const isBest  = r.sales === best;
+        const pct     = Math.round(r.sales / best * 100);
+        const d       = new Date(r.date + 'T00:00:00');
+        const dateStr = d.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        return `<tr>
+            <td style="color:var(--text-faint)">${i + 1}</td>
+            <td>
+                <strong>${dateStr}</strong>
+                ${isBest ? ' <span class="badge badge-amber" style="font-size:10px">🏆 Best Day</span>' : ''}
+            </td>
+            <td>${r.transactions} transaction${r.transactions !== 1 ? 's' : ''}</td>
+            <td><strong style="color:var(--success);font-size:15px">${peso(r.sales)}</strong></td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div class="stock-bar" style="min-width:80px">
+                        <div class="stock-bar-fill high" style="width:${pct}%"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-faint)">${pct}%</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+loadReport();
+
+</script>
+</body>
+</html>

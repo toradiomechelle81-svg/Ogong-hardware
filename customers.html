@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers — Ogong Hardware</title>
+    <meta name="description" content="Manage customer records for Ogong Hardware.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Customers</h1>
+            <p>Manage your customer database</p>
+        </div>
+        <div class="page-header-right">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search customers…" oninput="filterCustomers()">
+            </div>
+            <button class="btn btn-primary" onclick="openModal('addModal')">
+                ➕ Add Customer
+            </button>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <h2>👥 Customer Directory</h2>
+            <span id="customerCount" class="badge badge-gray">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Address</th>
+                        <th>Date Added</th>
+                    </tr>
+                </thead>
+                <tbody id="customersTable">
+                    <tr class="loading-row">
+                        <td colspan="6"><span class="spinner"></span> Loading customers…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+
+<!-- ADD CUSTOMER MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>➕ Add New Customer</h2>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid form-grid-2">
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="addName">Full Name <span class="req">*</span></label>
+                    <input type="text" id="addName" class="form-control" placeholder="Customer full name">
+                </div>
+                <div class="form-group">
+                    <label for="addPhone">Phone Number</label>
+                    <input type="text" id="addPhone" class="form-control" placeholder="09XXXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label for="addEmail">Email Address</label>
+                    <input type="email" id="addEmail" class="form-control" placeholder="email@example.com">
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="addAddress">Address</label>
+                    <input type="text" id="addAddress" class="form-control" placeholder="City / Province">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+            <button class="btn btn-primary" id="addBtn" onclick="addCustomer()">Save Customer</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+
+let allCustomers = [];
+
+async function loadCustomers() {
+    const res     = await fetch('/api/customers');
+    allCustomers  = await res.json();
+    renderTable(allCustomers);
+}
+
+function renderTable(list) {
+    const tbody = document.getElementById('customersTable');
+    document.getElementById('customerCount').textContent = list.length + ' customers';
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">
+            <div class="table-empty">
+                <div class="empty-icon">👥</div>
+                <p>No customers yet</p>
+                <small>Add a customer using the button above</small>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map((c, i) => {
+        const dt = new Date(c.created_at).toLocaleDateString('en-PH');
+        const initials = c.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+        return `<tr>
+            <td style="color:var(--text-faint)">${i + 1}</td>
+            <td>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:32px;height:32px;border-radius:50%;background:var(--info-bg);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${initials}</div>
+                    <strong>${c.name}</strong>
+                </div>
+            </td>
+            <td>${c.phone ? `<a href="tel:${c.phone}" style="color:var(--info);text-decoration:none">${c.phone}</a>` : '—'}</td>
+            <td>${c.email ? `<a href="mailto:${c.email}" style="color:var(--info);text-decoration:none;font-size:12px">${c.email}</a>` : '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${c.address || '—'}</td>
+            <td style="font-size:12px;color:var(--text-faint)">${dt}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterCustomers() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allCustomers.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        (c.phone || '').includes(q) ||
+        (c.email || '').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+}
+
+async function addCustomer() {
+    const btn  = document.getElementById('addBtn');
+    const name = document.getElementById('addName').value.trim();
+
+    if (!name) {
+        toast('Customer name is required.', 'error');
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    const res    = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name,
+            phone:   document.getElementById('addPhone').value.trim(),
+            email:   document.getElementById('addEmail').value.trim(),
+            address: document.getElementById('addAddress').value.trim()
+        })
+    });
+    const result = await res.json();
+
+    btn.disabled    = false;
+    btn.textContent = 'Save Customer';
+
+    if (result.success) {
+        toast('Customer added!', 'success');
+        closeModal('addModal');
+        ['addName','addPhone','addEmail','addAddress'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        loadCustomers();
+    } else {
+        toast(result.message || 'Failed to add customer.', 'error');
+    }
+}
+
+loadCustomers();
+
+</script>
+</body>
+</html>

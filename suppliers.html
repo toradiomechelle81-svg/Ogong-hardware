@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suppliers — Ogong Hardware</title>
+    <meta name="description" content="Manage hardware suppliers and vendor contacts.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text"><h2>OGONG</h2><p>Hardware</p></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Suppliers</h1>
+            <p>Manage your vendor and supplier contacts</p>
+        </div>
+        <div class="page-header-right">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search suppliers…" oninput="filterSuppliers()">
+            </div>
+            <button class="btn btn-primary" onclick="openModal('addModal')">
+                ➕ Add Supplier
+            </button>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <h2>🚚 Supplier Directory</h2>
+            <span id="supplierCount" class="badge badge-gray">Loading…</span>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Supplier Name</th>
+                        <th>Contact Person</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Address</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliersTable">
+                    <tr class="loading-row">
+                        <td colspan="8"><span class="spinner"></span> Loading suppliers…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+
+<!-- ADD SUPPLIER MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>➕ Add New Supplier</h2>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid form-grid-2">
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="addName">Supplier Name <span class="req">*</span></label>
+                    <input type="text" id="addName" class="form-control" placeholder="e.g. Ogong Building Supply">
+                </div>
+                <div class="form-group">
+                    <label for="addContact">Contact Person</label>
+                    <input type="text" id="addContact" class="form-control" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label for="addPhone">Phone Number</label>
+                    <input type="text" id="addPhone" class="form-control" placeholder="09XXXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label for="addEmail">Email Address</label>
+                    <input type="email" id="addEmail" class="form-control" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="addAddress">Address</label>
+                    <input type="text" id="addAddress" class="form-control" placeholder="City / Province">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+            <button class="btn btn-primary" id="addBtn" onclick="addSupplier()">Save Supplier</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+
+let allSuppliers = [];
+
+async function loadSuppliers() {
+    const res    = await fetch('/api/suppliers');
+    allSuppliers = await res.json();
+    renderTable(allSuppliers);
+}
+
+function renderTable(list) {
+    const tbody = document.getElementById('suppliersTable');
+    document.getElementById('supplierCount').textContent = list.length + ' suppliers';
+
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8">
+            <div class="table-empty">
+                <div class="empty-icon">🚚</div>
+                <p>No suppliers yet</p>
+                <small>Add a supplier using the button above</small>
+            </div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = list.map((s, i) => {
+        const dt = new Date(s.created_at).toLocaleDateString('en-PH');
+        return `<tr>
+            <td style="color:var(--text-faint)">${i + 1}</td>
+            <td><strong>🚚 ${s.name}</strong></td>
+            <td>${s.contact_person || '<span style="color:var(--text-faint)">—</span>'}</td>
+            <td>${s.phone ? `<a href="tel:${s.phone}" style="color:var(--info);text-decoration:none">${s.phone}</a>` : '—'}</td>
+            <td>${s.email ? `<a href="mailto:${s.email}" style="color:var(--info);text-decoration:none">${s.email}</a>` : '—'}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${s.address || '—'}</td>
+            <td style="font-size:12px;color:var(--text-faint)">${dt}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteSupplier(${s.id}, '${s.name.replace(/'/g,"\\'")}')">🗑️ Delete</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function filterSuppliers() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allSuppliers.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        (s.contact_person || '').toLowerCase().includes(q) ||
+        (s.phone || '').includes(q)
+    );
+    renderTable(filtered);
+}
+
+async function addSupplier() {
+    const btn  = document.getElementById('addBtn');
+    const name = document.getElementById('addName').value.trim();
+
+    if (!name) {
+        toast('Supplier name is required.', 'error');
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+
+    const res    = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name,
+            contact_person: document.getElementById('addContact').value.trim(),
+            phone:          document.getElementById('addPhone').value.trim(),
+            email:          document.getElementById('addEmail').value.trim(),
+            address:        document.getElementById('addAddress').value.trim()
+        })
+    });
+    const result = await res.json();
+
+    btn.disabled    = false;
+    btn.textContent = 'Save Supplier';
+
+    if (result.success) {
+        toast('Supplier added!', 'success');
+        closeModal('addModal');
+        ['addName','addContact','addPhone','addEmail','addAddress'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        loadSuppliers();
+    } else {
+        toast(result.message || 'Failed to add supplier.', 'error');
+    }
+}
+
+async function deleteSupplier(id, name) {
+    if (!confirm(`Delete supplier "${name}"?`)) return;
+
+    const res    = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+
+    if (result.success) {
+        toast(`"${name}" deleted.`, 'success');
+        loadSuppliers();
+    } else {
+        toast('Delete failed.', 'error');
+    }
+}
+
+loadSuppliers();
+
+</script>
+</body>
+</html>

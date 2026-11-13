@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Ogong Hardware</title>
+    <meta name="description" content="Admin dashboard for Ogong Hardware Management System.">
+    <link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<!-- HAMBURGER TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🔨</div>
+        <div class="sidebar-logo-text">
+            <h2>OGONG</h2>
+            <p>Hardware</p>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="admin.html"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="products.html"><span class="nav-icon">📦</span> Products</a>
+        <a href="inventory.html"><span class="nav-icon">🏷️</span> Inventory</a>
+
+        <div class="nav-label">Sales</div>
+        <a href="Cashier.html"><span class="nav-icon">🛒</span> Cashier / POS</a>
+        <a href="sales.html"><span class="nav-icon">🧾</span> Sales History</a>
+
+        <div class="nav-label">Management</div>
+        <a href="suppliers.html"><span class="nav-icon">🚚</span> Suppliers</a>
+        <a href="customers.html"><span class="nav-icon">👥</span> Customers</a>
+        <a href="users.html"><span class="nav-icon">👤</span> Users</a>
+        <a href="reports.html"><span class="nav-icon">📈</span> Reports</a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Dashboard</h1>
+            <p>Welcome back! Here's what's happening at Ogong Hardware.</p>
+        </div>
+        <div class="page-header-right">
+            <div class="user-chip">
+                <div class="user-avatar" id="userChipAvatar">A</div>
+                <span id="userChipName">Admin</span>
+                <span class="role-badge" id="userChipRole">admin</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card amber">
+            <div class="stat-icon amber">📦</div>
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value" id="statProducts">—</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-icon info">🗂️</div>
+            <div class="stat-label">Total Stock Units</div>
+            <div class="stat-value info" id="statStock">—</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-icon success">💰</div>
+            <div class="stat-label">Inventory Value</div>
+            <div class="stat-value success" id="statValue">—</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="stat-icon danger">⚠️</div>
+            <div class="stat-label">Low Stock Alerts</div>
+            <div class="stat-value danger" id="statLow">—</div>
+        </div>
+        <div class="stat-card navy">
+            <div class="stat-icon navy">🧾</div>
+            <div class="stat-label">Today's Sales</div>
+            <div class="stat-value" id="statSales">—</div>
+        </div>
+    </div>
+
+    <!-- Bottom Grid -->
+    <div class="dashboard-grid">
+
+        <!-- Low Stock Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h2>⚠️ Low Stock Items</h2>
+                <a href="inventory.html" class="btn btn-secondary btn-sm">View All</a>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lowStockTable">
+                        <tr class="loading-row">
+                            <td colspan="4"><span class="spinner"></span> Loading…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Sales Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h2>🧾 Recent Sales</h2>
+                <a href="sales.html" class="btn btn-secondary btn-sm">View All</a>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Receipt</th>
+                            <th>Cashier</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentSalesTable">
+                        <tr class="loading-row">
+                            <td colspan="3"><span class="spinner"></span> Loading…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</main>
+
+<script src="app.js"></script>
+<script>
+
+async function loadDashboard() {
+    try {
+        const res  = await fetch('/api/dashboard');
+        const data = await res.json();
+
+        document.getElementById('statProducts').textContent = data.total_products.toLocaleString();
+        document.getElementById('statStock').textContent    = data.total_stock.toLocaleString();
+        document.getElementById('statValue').textContent    = '₱' + Number(data.inventory_value).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        document.getElementById('statLow').textContent      = data.low_stock;
+        document.getElementById('statSales').textContent    = '₱' + Number(data.today_sales).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+    } catch (e) {
+        toast('Failed to load dashboard data.', 'error');
+    }
+}
+
+async function loadLowStock() {
+    try {
+        const res      = await fetch('/api/products');
+        const products = await res.json();
+        const low      = products.filter(p => p.stock <= p.minimum_stock);
+        const tbody    = document.getElementById('lowStockTable');
+
+        if (low.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-faint)">✅ All products are well-stocked</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = low.slice(0, 8).map(p => {
+            const status = p.stock === 0
+                ? '<span class="badge badge-danger">Out of Stock</span>'
+                : '<span class="badge badge-warning">Low Stock</span>';
+            return `<tr>
+                <td><strong>${p.name}</strong><br><span style="font-size:11px;color:var(--text-faint)">${p.sku}</span></td>
+                <td>${p.category}</td>
+                <td><strong>${p.stock}</strong> / ${p.minimum_stock}</td>
+                <td>${status}</td>
+            </tr>`;
+        }).join('');
+
+    } catch (e) {}
+}
+
+async function loadRecentSales() {
+    try {
+        const res   = await fetch('/api/sales');
+        const sales = await res.json();
+        const tbody = document.getElementById('recentSalesTable');
+
+        if (sales.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-faint)">No sales yet today</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = sales.slice(0, 8).map(s => `
+            <tr>
+                <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${s.receipt_no}</code></td>
+                <td>${s.cashier || '—'}</td>
+                <td><strong style="color:var(--success)">${peso(s.total)}</strong></td>
+            </tr>
+        `).join('');
+
+    } catch (e) {}
+}
+
+loadDashboard();
+loadLowStock();
+loadRecentSales();
+
+</script>
+</body>
+</html>

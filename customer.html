@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Customers - Ogong Hardware</title>
+<link rel="stylesheet" href="Style.css">
+</head>
+
+<body>
+
+<div class="sidebar">
+
+<h2>🔨 OGONG</h2>
+
+<a href="admin.html">📊 Dashboard</a>
+<a href="products.html">📦 Products</a>
+<a href="inventory.html">🏷 Inventory</a>
+<a href="Cashier.html">🛒 Cashier</a>
+<a href="sales.html">🧾 Sales</a>
+<a href="suppliers.html">🚚 Suppliers</a>
+<a href="customers.html">👥 Customers</a>
+
+</div>
+
+
+<div class="main">
+
+<h1>Customer Management</h1>
+
+<input
+    id="name"
+    placeholder="Customer Name"
+>
+
+<input
+    id="phone"
+    placeholder="Phone"
+>
+
+<input
+    id="email"
+    placeholder="Email"
+>
+
+<input
+    id="address"
+    placeholder="Address"
+>
+
+<button onclick="addCustomer()">
+    Add Customer
+</button>
+
+
+<table>
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Address</th>
+</tr>
+</thead>
+
+<tbody id="table"></tbody>
+
+</table>
+
+</div>
+
+
+<script>
+
+async function load() {
+
+    const response =
+        await fetch("/api/customers");
+
+    const customers =
+        await response.json();
+
+    const table =
+        document.getElementById("table");
+
+    table.innerHTML = "";
+
+    customers.forEach(c => {
+
+        table.innerHTML += `
+
+        <tr>
+
+            <td>${c.name}</td>
+            <td>${c.phone || ""}</td>
+            <td>${c.email || ""}</td>
+            <td>${c.address || ""}</td>
+
+        </tr>
+
+        `;
+
+    });
+
+}
+
+
+async function addCustomer() {
+
+    await fetch("/api/customers", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type":
+                "application/json"
+        },
+
+        body: JSON.stringify({
+
+            name:
+                document.getElementById("name").value,
+
+            phone:
+                document.getElementById("phone").value,
+
+            email:
+                document.getElementById("email").value,
+
+            address:
+                document.getElementById("address").value
+
+        })
+
+    });
+
+    alert("Customer added!");
+
+    load();
+
+}
+
+
+load();
+
+</script>
+
+</body>
+</html>
